@@ -1,3 +1,6 @@
+// Following required for qsort_r on Linux
+#define _GNU_SOURCE
+
 #include "packet.h"
 #include <string.h>
 #include <stdlib.h>
@@ -361,7 +364,11 @@ void packet_sort(packet_t p)
 {
   int keys = packet_keys(p);
   if(!keys) return;
+#if 0
   qsort_r(p->js,keys,sizeof(unsigned short)*4,p->json,pkeycmp);
+#else
+  qsort_r(p->js,keys,sizeof(unsigned short)*4,pkeycmp,p->json);
+#endif
 }
 
 int packet_cmp(packet_t a, packet_t b)
