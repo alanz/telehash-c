@@ -11,6 +11,7 @@
 #include "j0g.h"
 #include "hn.h"
 #include "platform.h"
+#include "util.h"
 
 packet_t packet_new()
 {
@@ -364,11 +365,7 @@ void packet_sort(packet_t p)
 {
   int keys = packet_keys(p);
   if(!keys) return;
-#if 0
-  qsort_r(p->js,keys,sizeof(unsigned short)*4,p->json,pkeycmp);
-#else
-  qsort_r(p->js,keys,sizeof(unsigned short)*4,pkeycmp,p->json);
-#endif
+  util_sort(p->js,keys,sizeof(unsigned short)*4,pkeycmp,p->json);
 }
 
 int packet_cmp(packet_t a, packet_t b)
