@@ -7,14 +7,15 @@
 #include "util.h"
 #include "chan.h"
 
-void hn_free(hn_t hn)
+hn_t hn_free(hn_t hn)
 {
-  if(!hn) return;
+  if(!hn) return NULL;
   if(hn->chans) xht_free(hn->chans);
   if(hn->c) crypt_free(hn->c);
   if(hn->parts) packet_free(hn->parts);
-  free(hn->paths);
+  if(hn->paths) free(hn->paths);
   free(hn);
+  return NULL;
 }
 
 hn_t hn_get(xht_t index, unsigned char *bin)
@@ -28,20 +29,22 @@ hn_t hn_get(xht_t index, unsigned char *bin)
   if(hn) return hn;
 
   // init new hashname container
-  hn = malloc(sizeof (struct hn_struct));
+  if(!(hn = malloc(sizeof (struct hn_struct)))) return NULL;
   memset(hn,0,sizeof (struct hn_struct));
   memcpy(hn->hashname, bin, 32);
   memcpy(hn->hexname, hex, 65);
   xht_set(index, (const char*)hn->hexname, (void*)hn);
-  hn->paths = malloc(sizeof (path_t));
+  if(!(hn->paths = malloc(sizeof (path_t)))) return hn_free(hn);
   hn->paths[0] = NULL;
   return hn;
 }
 
 hn_t hn_gethex(xht_t index, char *hex)
 {
+  hn_t hn;
   unsigned char bin[32];
   if(!hex || strlen(hex) < 64) return NULL;
+  if((hn = xht_get(index,hex))) return hn;
   util_unhex((unsigned char*)hex,64,bin);
   return hn_get(index,bin);
 }
@@ -81,18 +84,18 @@ hn_t hn_getparts(xht_t index, packet_t p)
   for(i=0;i<ids;i++)
   {
     len = 2;
-    rollup = realloc(rollup,ri+len);
+    if(!(rollup = util_reallocf(rollup,ri+len))) return NULL;
     memcpy(rollup+ri,csids+(i*2),len);
     crypt_hash(rollup,ri+len,hnbin);
     ri = 32;
-    rollup = realloc(rollup,ri);
+    if(!(rollup = util_reallocf(rollup,ri))) return NULL;
     memcpy(rollup,hnbin,ri);
 
     memcpy(hex,csids+(i*2),2);
     part = packet_get_str(p, hex);
     if(!part) continue; // garbage safety
     len = strlen(part);
-    rollup = realloc(rollup,ri+len);
+    if(!(rollup = util_reallocf(rollup,ri+len))) return NULL;
     memcpy(rollup+ri,part,len);
     crypt_hash(rollup,ri+len,hnbin);
     memcpy(rollup,hnbin,32);
@@ -149,7 +152,7 @@ hn_t hn_fromjson(xht_t index, packet_t p)
   pp = packet_get_packets(p, "paths");
   while(pp)
   {
-    path = hn_path(hn, path_parse(pp->json, pp->json_len));
+    path = hn_path(hn, path_parse((char*)pp->json, pp->json_len));
     if(path) path->atIn = 0; // don't consider this path alive
     next = pp->next;
     packet_free(pp);
@@ -184,13 +187,12 @@ path_t hn_path(hn_t hn, path_t p)
   {
     if(path_match(hn->paths[i], p)) ret = hn->paths[i];
   }
-  if(!ret)
+  if(!ret && (ret = path_copy(p)))
   {
     // add new path, i is the end of the list from above
-    hn->paths = realloc(hn->paths, (i+2) * (sizeof (path_t)));
-    hn->paths[i] = path_parse(path_json(p),0); // create a new copy
+    if(!(hn->paths = util_reallocf(hn->paths, (i+2) * (sizeof (path_t))))) return NULL;
+    hn->paths[i] = ret;
     hn->paths[i+1] = 0; // null term
-    ret = hn->paths[i];
   }
 
   // update state tracking

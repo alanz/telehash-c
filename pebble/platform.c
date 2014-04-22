@@ -1,14 +1,17 @@
 #include <stdarg.h>
-#include "avr.h"
+#include <stdio.h>
+#include <time.h>
+
+#include "platform.h"
 
 unsigned long platform_seconds()
 {
-  return (unsigned long)millis()/1000;
+  return (unsigned long)time(0);
 }
 
 unsigned short platform_short(unsigned short x)
 {
-   return ( ((x)<<8) | (((x)>>8)&0xFF) );
+  return ( ((x)<<8) | (((x)>>8)&0xFF) );
 }
 
 int _debugging = 0;
@@ -30,6 +33,11 @@ void platform_debug(char * format, ...)
     if(!_debugging) return;
     va_start (args, format);
     vsnprintf (buffer, 256, format, args);
-    println(buffer);
+//    printf("%s\n", buffer);
     va_end (args);
+}
+
+void *_sbrk(int incr)
+{
+  return NULL;
 }

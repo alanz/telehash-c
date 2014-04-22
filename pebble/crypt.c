@@ -4,52 +4,21 @@
 #include <stdint.h>
 #include "crypt.h"
 #include "util.h"
-#include "platform.h"
-
-unsigned char *crypt_rand(unsigned char *s, int len)
-{
-
- unsigned char *x = s;
- 
-  while(len-- > 0)
-  {
-    *x = (unsigned char)random();
-    x++;
-  }
-  return s;
-}
-
-unsigned char *crypt_hash(unsigned char *input, unsigned long len, unsigned char *output)
-{
-  sha256((uint8_t (*)[32])output,input,len);
-  return output;
-}
-
-char *crypt_err()
-{
-  return 0;
-}
 
 int crypt_init()
 {
-  int ret = -1;
-  int i = 0;
-  crypt_supported = malloc(8);
-  memset(crypt_supported,0,8);
+  int ret = 0;
 #ifdef CS_1a
   ret = crypt_init_1a();
   if(ret) return ret;
-  crypt_supported[i++] = 0x1a;
 #endif
 #ifdef CS_2a
   ret = crypt_init_2a();
   if(ret) return ret;
-  crypt_supported[i++] = 0x2a;
 #endif
 #ifdef CS_3a
   ret = crypt_init_3a();
   if(ret) return ret;
-  crypt_supported[i++] = 0x3a;
 #endif
   return ret;
 }
@@ -109,13 +78,11 @@ int crypt_keygen(char csid, packet_t p)
   if(csid == 0x1a) return crypt_keygen_1a(p);
 #endif
 #ifdef CS_2a
-
   if(csid == 0x2a) return crypt_keygen_2a(p);
 #endif
 #ifdef CS_3a
-
   if(csid == 0x3a) return crypt_keygen_3a(p);
-#endif 
+#endif
 
   return 1;
 }

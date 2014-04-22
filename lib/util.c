@@ -3,15 +3,17 @@
 #include <stdint.h>
 #include "util.h"
 
-
 unsigned char *util_hex(unsigned char *in, int len, unsigned char *out)
 {
     int j;
     unsigned char *c = out;
+    static char *hex = "0123456789abcdef";
 
     for (j = 0; j < len; j++) {
-      sprintf((char*)c,"%02x", in[j]);
-      c += 2;
+      *c = hex[((in[j]&240)/16)];
+      c++;
+      *c = hex[in[j]&15];
+      c++;
     }
     *c = '\0';
     return out;
@@ -26,20 +28,20 @@ unsigned char hexcode(unsigned char x)
     else if (x >= 'a' && x <= 'f')    /* a-f offset by hex 37 */
       return(x - 0x57);
     else {                            /* Otherwise, an illegal hex digit */
-		return x;
+      return x;
     }
 }
 
 unsigned char *util_unhex(unsigned char *in, int len, unsigned char *out)
 {
-	int j;
-	unsigned char *c = out;
-	for(j=0; (j+1)<len; j+=2)
-	{
-		*c = ((hexcode(in[j]) * 16) & 0xF0) + (hexcode(in[j+1]) & 0xF);
-		c++;
-	}
-	return out;
+  int j;
+  unsigned char *c = out;
+  for(j=0; (j+1)<len; j+=2)
+  {
+    *c = ((hexcode(in[j]) * 16) & 0xF0) + (hexcode(in[j+1]) & 0xF);
+    c++;
+  }
+  return out;
 }
 
 int util_cmp(char *a, char *b)
@@ -163,4 +165,13 @@ void util_sort(void *base, int nel, int width, int (*comp)(void *, const void *,
       wgap = (wgap - width)/3;
     } while (wgap);
   }
+}
+
+// portable reallocf
+void *util_reallocf(void *ptr, size_t size)
+{
+  void *ra = realloc(ptr,size);
+  if(ra) return ra;
+  free(ptr);
+  return NULL;
 }

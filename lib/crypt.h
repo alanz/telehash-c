@@ -3,6 +3,12 @@
 
 #include "packet.h"
 
+// by default enable CS1a as minimum support
+#ifdef NOCS_1a
+#else
+#define CS_1a
+#endif 
+
 typedef struct crypt_struct
 {
   char csidHex[3], *part;
@@ -12,8 +18,6 @@ typedef struct crypt_struct
   unsigned char *key, csid;
   void *cs; // for CS usage
 } *crypt_t;
-
-extern char *crypt_supported;
 
 // these functions are all independent of CS, implemented in crypt.c
 

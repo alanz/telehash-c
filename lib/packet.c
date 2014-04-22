@@ -15,11 +15,11 @@
 
 packet_t packet_new()
 {
-  packet_t p = malloc(sizeof (struct packet_struct));
+  packet_t p;
+  if(!(p = malloc(sizeof (struct packet_struct)))) return NULL;
   memset(p,0,sizeof (struct packet_struct));
-  p->raw = malloc(2);
+  if(!(p->raw = malloc(2))) return packet_free(p);
   memset(p->raw,0,2);
-//  DEBUG_PRINTF("packet +++ %d",p);
   return p;
 }
 
@@ -45,6 +45,7 @@ packet_t packet_unlink(packet_t parent)
 packet_t packet_link(packet_t parent, packet_t child)
 {
   if(!parent) parent = packet_new();
+  if(!parent) return NULL;
   if(parent->chain) packet_free(parent->chain);
   parent->chain = child;
   if(child && child->chain == parent) child->chain = NULL;
@@ -54,6 +55,7 @@ packet_t packet_link(packet_t parent, packet_t child)
 packet_t packet_chain(packet_t p)
 {
   packet_t np = packet_new();
+  if(!np) return NULL;
   np->chain = p;
   // copy in meta-pointers for convenience
   np->to = p->to;
@@ -73,7 +75,7 @@ packet_t packet_free(packet_t p)
   if(!p) return NULL;
   if(p->chain) packet_free(p->chain);
   if(p->jsoncp) free(p->jsoncp);
-  free(p->raw);
+  if(p->raw) free(p->raw);
   free(p);
 //  DEBUG_PRINTF("packet --- %d",p);
   return NULL;
@@ -102,7 +104,7 @@ packet_t packet_parse(unsigned char *raw, unsigned short len)
 
   // copy in and update pointers
   p = packet_new();
-  p->raw = realloc(p->raw,len);
+  if(!(p->raw = realloc(p->raw,len))) return packet_free(p);
   memcpy(p->raw,raw,len);
   p->json_len = jlen;
   p->json = p->raw+2;
@@ -130,10 +132,12 @@ unsigned short packet_len(packet_t p)
 int packet_json(packet_t p, unsigned char *json, unsigned short len)
 {
   uint16_t nlen;
+  void *ptr;
   if(!p) return 1;
   if(len >= 2 && js0n(json,len,p->js,JSONDENSITY)) return 1;
   // new space and update pointers
-  p->raw = realloc(p->raw,2+len+p->body_len);
+  if(!(ptr = realloc(p->raw,2+len+p->body_len))) return 1;
+  p->raw = (unsigned char *)ptr;
   p->json = p->raw+2;
   p->body = p->raw+(2+len);
   // move the body forward to make space
@@ -148,20 +152,25 @@ int packet_json(packet_t p, unsigned char *json, unsigned short len)
   return 0;
 }
 
-void packet_body(packet_t p, unsigned char *body, unsigned short len)
+unsigned char *packet_body(packet_t p, unsigned char *body, unsigned short len)
 {
-  if(!p) return;
-  p->raw = realloc(p->raw,2+len+p->json_len);
+  void *ptr;
+  if(!p) return NULL;
+  if(!(ptr = realloc(p->raw,2+len+p->json_len))) return NULL;
+  p->raw = (unsigned char *)ptr;
   p->json = p->raw+2;
   p->body = p->raw+(2+p->json_len);
   if(body) memcpy(p->body,body,len); // allows packet_body(p,NULL,100) to allocate space
   p->body_len = len;
+  return p->body;
 }
 
 void packet_append(packet_t p, unsigned char *chunk, unsigned short len)
 {
+  void *ptr;
   if(!p || !chunk || !len) return;
-  p->raw = realloc(p->raw,2+len+p->body_len+p->json_len);
+  if(!(ptr = realloc(p->raw,2+len+p->body_len+p->json_len))) return;
+  p->raw = (unsigned char *)ptr;
   p->json = p->raw+2;
   p->body = p->raw+(2+p->json_len);
   memcpy(p->body+p->body_len,chunk,len);
@@ -180,7 +189,7 @@ void packet_set(packet_t p, char *key, char *val, int vlen)
   if(!vlen) vlen = strlen(val); // convenience
 
   // make space and copy
-  json = malloc(klen+vlen+p->json_len+4);
+  if(!(json = malloc(klen+vlen+p->json_len+4))) return;
   memcpy(json,p->json,p->json_len);
 
   // if it's already set, replace the value
@@ -231,9 +240,7 @@ void packet_set_printf(packet_t p, char *key, const char *format, ...)
   va_copy(cp, ap);
 
   len = vsnprintf(NULL, 0, format, cp);
-  val = malloc(len);
-
-  vsprintf(val, format, ap);
+  if((val = malloc(len))) vsprintf(val, format, ap);
   va_end(ap);
   va_end(cp);
 
@@ -253,7 +260,7 @@ void packet_set_str(packet_t p, char *key, char *val)
   char *escaped;
   int i, len, vlen = strlen(val);
   if(!p || !key || !val) return;
-  escaped = malloc(vlen*2+2); // enough space worst case
+  if(!(escaped = malloc(vlen*2+2))) return; // enough space worst case
   len = 0;
   escaped[len++] = '"';
   for(i=0;i<vlen;i++)
@@ -271,7 +278,7 @@ char *packet_j0g(packet_t p)
 {
   if(!p) return NULL;
   if(p->jsoncp) return p->jsoncp;
-  p->jsoncp = malloc(p->json_len+1);
+  if(!(p->jsoncp = malloc(p->json_len+1))) return NULL;
   memcpy(p->jsoncp,p->json,p->json_len);
   p->jsoncp[p->json_len] = 0;
   return p->jsoncp;

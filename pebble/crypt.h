@@ -3,6 +3,12 @@
 
 #include "packet.h"
 
+// by default enable CS1a as minimum support
+#ifdef NOCS_1a
+#else
+#define CS_1a
+#endif 
+
 typedef struct crypt_struct
 {
   char csidHex[3], *part;
@@ -13,12 +19,7 @@ typedef struct crypt_struct
   void *cs; // for CS usage
 } *crypt_t;
 
-char *crypt_supported;
-
 // these functions are all independent of CS, implemented in crypt.c
-
-
-unsigned char *crypt_rand(unsigned char *s, int len);
 
 // must be called before any
 int crypt_init();
@@ -63,6 +64,20 @@ packet_t crypt_deopenize(crypt_t self, packet_t p);
 // tries to create a new line, !0 if error/ignored, always frees inner
 int crypt_line(crypt_t c, packet_t inner);
 
+#ifdef CS_1a
+int crypt_init_1a();
+int crypt_new_1a(crypt_t c, unsigned char *key, int len);
+void crypt_free_1a(crypt_t c);
+int crypt_keygen_1a(packet_t p);
+int crypt_public_1a(crypt_t c, unsigned char *key, int len);
+int crypt_private_1a(crypt_t c, unsigned char *key, int len);
+packet_t crypt_lineize_1a(crypt_t c, packet_t p);
+packet_t crypt_delineize_1a(crypt_t c, packet_t p);
+packet_t crypt_openize_1a(crypt_t self, crypt_t c, packet_t inner);
+packet_t crypt_deopenize_1a(crypt_t self, packet_t p);
+int crypt_line_1a(crypt_t c, packet_t inner);
+#endif
+
 #ifdef CS_2a
 int crypt_init_2a();
 int crypt_new_2a(crypt_t c, unsigned char *key, int len);
@@ -75,6 +90,20 @@ packet_t crypt_delineize_2a(crypt_t c, packet_t p);
 packet_t crypt_openize_2a(crypt_t self, crypt_t c, packet_t inner);
 packet_t crypt_deopenize_2a(crypt_t self, packet_t p);
 int crypt_line_2a(crypt_t c, packet_t inner);
+#endif
+
+#ifdef CS_3a
+int crypt_init_3a();
+int crypt_new_3a(crypt_t c, unsigned char *key, int len);
+void crypt_free_3a(crypt_t c);
+int crypt_keygen_3a(packet_t p);
+int crypt_public_3a(crypt_t c, unsigned char *key, int len);
+int crypt_private_3a(crypt_t c, unsigned char *key, int len);
+packet_t crypt_lineize_3a(crypt_t c, packet_t p);
+packet_t crypt_delineize_3a(crypt_t c, packet_t p);
+packet_t crypt_openize_3a(crypt_t self, crypt_t c, packet_t inner);
+packet_t crypt_deopenize_3a(crypt_t self, packet_t p);
+int crypt_line_3a(crypt_t c, packet_t inner);
 #endif
 
 #endif

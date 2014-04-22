@@ -52,29 +52,24 @@ void sha1_init(sha1_ctx_t *state){
 
 /********************************************************************************************************/
 /* some helping functions */
-static const
 uint32_t rotl32(uint32_t n, uint8_t bits){
 	return ((n<<bits) | (n>>(32-bits)));
 }
 
-static const
 uint32_t change_endian32(uint32_t x){
 	return (((x)<<24) | ((x)>>24) | (((x)& 0x0000ff00)<<8) | (((x)& 0x00ff0000)>>8));
 }
 
 
 /* three SHA-1 inner functions */
-const
 uint32_t ch(uint32_t x, uint32_t y, uint32_t z){
 	return ((x&y)^((~x)&z));
 }
 
-const
 uint32_t maj(uint32_t x, uint32_t y, uint32_t z){
 	return ((x&y)^(x&z)^(y&z));
 }
 
-const
 uint32_t parity(uint32_t x, uint32_t y, uint32_t z){
 	return ((x^y)^z);
 }
@@ -88,7 +83,7 @@ uint32_t parity(uint32_t x, uint32_t y, uint32_t z){
 
 #define MASK 0x0000000f
 
-typedef const uint32_t (*pf_t)(uint32_t x, uint32_t y, uint32_t z);
+typedef uint32_t (*pf_t)(uint32_t x, uint32_t y, uint32_t z);
 
 void sha1_nextBlock (sha1_ctx_t *state, const void* block){
 	uint32_t a[5];

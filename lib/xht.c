@@ -1,6 +1,7 @@
 #include "xht.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 typedef struct xhn_struct
 {
@@ -12,7 +13,7 @@ typedef struct xhn_struct
 
 struct xht_struct
 {
-    int prime;
+    uint32_t prime;
     xhn zen;
 };
 
@@ -20,22 +21,22 @@ struct xht_struct
  * This function uses the ELF hashing algorithm as reprinted in 
  * Andrew Binstock, "Hashing Rehashed," Dr. Dobb's Journal, April 1996.
  */
-int _xhter(const char *s)
+uint32_t _xhter(const char *s)
 {
     /* ELF hash uses unsigned chars and unsigned arithmetic for portability */
     const unsigned char *name = (const unsigned char *)s;
-    unsigned long h = 0, g;
+    uint32_t h = 0, g;
 
     while (*name)
-    { /* do some fancy bitwanking on the string */
-        h = (h << 4) + (unsigned long)(*name++);
+    {
+       /* do some fancy bitwanking on the string */
+        h = (h << 4) + (uint32_t)(*name++);
         if ((g = (h & 0xF0000000UL))!=0)
             h ^= (g >> 24);
         h &= ~g;
-
     }
 
-    return (int)h;
+    return h;
 }
 
 
@@ -53,8 +54,14 @@ xht_t xht_new(int prime)
     xht_t xnew;
 
     xnew = (xht_t)malloc(sizeof(struct xht_struct));
-    xnew->prime = prime;
+    if(!xnew) return NULL;
+    xnew->prime = (uint32_t)prime;
     xnew->zen = (xhn)malloc(sizeof(struct xhn_struct)*prime); /* array of xhn size of prime */
+    if(!xnew->zen)
+    {
+      free(xnew);
+      return NULL;
+    }
     memset(xnew->zen,0,sizeof(struct xhn_struct)*prime);
     return xnew;
 }
@@ -62,7 +69,7 @@ xht_t xht_new(int prime)
 /* does the set work, used by xht_set and xht_store */
 void _xht_set(xht_t h, const char *key, void *val, char flag)
 {
-    int i;
+    uint32_t i;
     xhn n;
 
     /* get our index for this key */
@@ -78,6 +85,8 @@ void _xht_set(xht_t h, const char *key, void *val, char flag)
     if(n == 0)
     {
         n = (xhn)malloc(sizeof(struct xhn_struct));
+        if(!n) return;
+        memset(n,0,sizeof(struct xhn_struct));
         n->next = h->zen[i].next;
         h->zen[i].next = n;
     }
@@ -96,24 +105,28 @@ void _xht_set(xht_t h, const char *key, void *val, char flag)
 
 void xht_set(xht_t h, const char *key, void *val)
 {
-    if(h == 0 || key == 0)
-        return;
+    if(h == 0 || key == 0) return;
     _xht_set(h, key, val, 0);
 }
 
-void xht_store(xht_t h, const char *key, int klen, void *val, int vlen)
+void xht_store(xht_t h, const char *key, void *val, int vlen)
 {
     char *ckey, *cval;
+    int klen;
 
-    if(h == 0 || key == 0 || klen == 0)
-        return;
+    if(h == 0 || key == 0 || (klen = strlen(key)) == 0) return;
 
     ckey = (char*)malloc(klen+1);
+    if(!ckey) return;
     memcpy(ckey,key,klen);
     ckey[klen] = '\0';
-    cval = (void*)malloc(vlen+1);
+    cval = (void*)malloc(vlen);
+    if(!cval)
+    {
+      free(ckey);
+      return;
+    }
     memcpy(cval,val,vlen);
-    cval[vlen] = '\0'; /* convenience, in case it was a string too */
     _xht_set(h, ckey, cval, 1);
 }
 
@@ -122,8 +135,8 @@ void *xht_get(xht_t h, const char *key)
 {
     xhn n;
 
-    if(h == 0 || key == 0 || (n = _xht_node_find(&h->zen[_xhter(key) % h->prime], key)) == 0)
-        return 0;
+    if(h == 0 || key == 0) return 0;
+    if((n = _xht_node_find(&h->zen[_xhter(key) % h->prime], key)) == 0) return 0;
 
     return n->val;
 }
@@ -132,7 +145,7 @@ void *xht_get(xht_t h, const char *key)
 void xht_free(xht_t h)
 {
     xhn n, f;
-    int i;
+    uint32_t i;
 
     if(h == 0) return;
 
@@ -155,7 +168,7 @@ void xht_free(xht_t h)
 
 void xht_walk(xht_t h, xht_walker w, void *arg)
 {
-    int i;
+    uint32_t i;
     xhn n;
 
     if(h == 0 || w == 0)

@@ -20,12 +20,14 @@ typedef struct switch_struct
   chan_t chans; // channels waiting to be processed
   uint32_t uid;
   int cap, window;
+  uint8_t isSeed;
   xht_t index;
   void (*handler)(struct switch_struct *, hn_t); // called w/ a hn that has no key info
 } *switch_t;
 
-switch_t switch_new();
-void switch_free(switch_t s);
+// pass in a prime for the main index of hashnames+lines+channels, 0 to use default
+switch_t switch_new(uint32_t prime);
+switch_t switch_free(switch_t s);
 
 // must be called to initialize to a hashname from json keys, return !0 if failed, free's keys
 int switch_init(switch_t s, packet_t keys);
@@ -35,6 +37,9 @@ void switch_seed(switch_t s, hn_t hn);
 
 // should be called at least once a second, handles timers
 void switch_loop(switch_t s);
+
+// generate a broadcast/handshake ping packet, only send these locally
+packet_t switch_ping(switch_t s);
 
 // get a packet to be sent, NULL if none
 packet_t switch_sending(switch_t s);

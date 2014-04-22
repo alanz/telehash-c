@@ -1,12 +1,4 @@
-#include <stdlib.h>
-#include "switch.h"
-#include "ecc.h"
-#include "aes.h"
-#include "sha256.h"
-#include "sha1.h"
-#include "hmac.h"
-#include "base64_enc.h"
-#include "base64_dec.h"
+#include "pebble.h"
 
 typedef struct crypt_1a_struct
 {
@@ -19,7 +11,7 @@ int RNG(uint8_t *p_dest, unsigned p_size)
 {
   while(p_size--)
   {
-    *p_dest = (uint8_t)random();
+    *p_dest = (uint8_t)rand();
     p_dest++;
   }
   return 1;
@@ -27,7 +19,9 @@ int RNG(uint8_t *p_dest, unsigned p_size)
 
 int crypt_init_1a()
 {
+  DEBUG_PRINTF("CS1a init");
   ecc_set_rng(&RNG);
+  return 0;
 }
 
 int crypt_new_1a(crypt_t c, unsigned char *key, int len)
@@ -46,7 +40,7 @@ int crypt_new_1a(crypt_t c, unsigned char *key, int len)
     memcpy(cs->id_public,key,ECC_BYTES*2);
   }else{
     // try to base64 decode in case that's the incoming format
-    if(key[len] != 0 || base64_binlength(key,0) != ECC_BYTES*2 || base64dec(cs->id_public,key,0)) return -1;
+    if(key[len] != 0 || base64_binlength((char*)key,0) != ECC_BYTES*2 || base64dec(cs->id_public,(char*)key,0)) return -1;
   }
   
   // generate fingerprint
@@ -90,8 +84,6 @@ int crypt_keygen_1a(packet_t p)
 
 int crypt_private_1a(crypt_t c, unsigned char *key, int len)
 {
-  unsigned long der_len = 4096;
-  unsigned char der[der_len];
   crypt_1a_t cs = (crypt_1a_t)c->cs;
   
   if(!key || len <= 0) return 1;
@@ -101,7 +93,7 @@ int crypt_private_1a(crypt_t c, unsigned char *key, int len)
     memcpy(cs->id_private,key,ECC_BYTES);
   }else{
     // try to base64 decode in case that's the incoming format
-    if(key[len] != 0 || base64_binlength(key,0) != ECC_BYTES || base64dec(cs->id_private,key,0)) return -1;
+    if(key[len] != 0 || base64_binlength((char*)key,0) != ECC_BYTES || base64dec(cs->id_private,(char*)key,0)) return -1;
   }
 
   c->isprivate = 1;

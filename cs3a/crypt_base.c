@@ -1,20 +1,18 @@
-#include "avr.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <sodium.h>
 
 unsigned char *crypt_rand(unsigned char *s, int len)
 {
-  unsigned char *x = s;
-//  DEBUG_PRINTF("RAND %lu %d",s,len);
-  while(len-- > 0)
-  {
-    *x = (unsigned char)random();
-    x++;
-  }
+  randombytes_buf((void * const)s, (const size_t)len);
   return s;
 }
 
 unsigned char *crypt_hash(unsigned char *input, unsigned long len, unsigned char *output)
 {
-  sha256((uint8_t (*)[32])output,input,len*8);
+  crypto_hash_sha256(output,input,(unsigned long)len);
   return output;
 }
 
